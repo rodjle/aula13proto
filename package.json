@@ -1,0 +1,24 @@
+{
+  "name": "protocols-benchmark",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Benchmark visual de protocolos de comunicacao client-server em Node.js",
+  "main": "benchmark.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node dashboard/server.js",
+    "dev": "concurrently -k -n REST,GRAPHQL,GRPC,WS,QUEUE,DASHBOARD -c cyan,green,magenta,yellow,blue,white \"node rest/server.js\" \"node graphql/server.js\" \"node grpc/server.js\" \"node websocket/server.js\" \"node queue/server.js\" \"node dashboard/server.js\""
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.11.3",
+    "@grpc/proto-loader": "^0.7.13",
+    "concurrently": "^9.1.2",
+    "express": "^4.21.2",
+    "graphql": "^16.9.0",
+    "graphql-http": "^1.22.0",
+    "ws": "^8.18.0"
+  }
+}

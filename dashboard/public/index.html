@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Protocolos de Comunicação — Simulador</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+    nav {
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      height: 60px;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    nav .logo { font-weight: 700; font-size: 1.1rem; color: #38bdf8; margin-right: 2rem; white-space: nowrap; }
+    nav .menu { display: flex; gap: 0.3rem; overflow-x: auto; }
+    nav .menu button {
+      background: transparent; border: none; color: #94a3b8; padding: 0.6rem 1.2rem;
+      border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500;
+      white-space: nowrap; transition: all 0.2s;
+    }
+    nav .menu button:hover { background: #334155; color: #e2e8f0; }
+    nav .menu button.active { background: #3b82f6; color: #fff; }
+    main { max-width: 1100px; margin: 0 auto; padding: 2.5rem 2rem; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .proto-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .proto-header .icon { font-size: 2rem; }
+    .proto-header h1 { font-size: 1.6rem; color: #f1f5f9; }
+    .proto-description { color: #94a3b8; margin-bottom: 2rem; line-height: 1.6; max-width: 750px; }
+    .proto-description strong { color: #e2e8f0; }
+    .sim-container { display: grid; grid-template-columns: 1fr 200px 1fr; gap: 0; align-items: start; margin-bottom: 2rem; }
+    .sim-box {
+      background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+      padding: 1.5rem; min-height: 280px;
+    }
+    .sim-box h3 { font-size: 0.8rem; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; margin-bottom: 1rem; }
+    .sim-middle { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 280px; }
+    .arrow-track { width: 4px; height: 200px; background: #334155; border-radius: 2px; position: relative; overflow: visible; }
+    .arrow-dot {
+      width: 14px; height: 14px; border-radius: 50%; position: absolute;
+      left: 50%; transform: translateX(-50%); opacity: 0; transition: none;
+    }
+    .arrow-label { font-size: 0.7rem; color: #64748b; margin: 0.5rem 0; text-align: center; }
+    .log-area {
+      background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 1rem;
+      font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.78rem;
+      max-height: 180px; overflow-y: auto; line-height: 1.7;
+    }
+    .log-area .log-req { color: #38bdf8; }
+    .log-area .log-res { color: #4ade80; }
+    .log-area .log-info { color: #fbbf24; }
+    .btn-run {
+      background: #3b82f6; color: #fff; border: none; padding: 0.7rem 1.8rem;
+      border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600;
+      transition: background 0.2s; margin-bottom: 1.5rem;
+    }
+    .btn-run:hover { background: #2563eb; }
+    .btn-run:disabled { background: #475569; cursor: not-allowed; }
+    .how-section {
+      background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+      padding: 1.5rem 2rem; margin-top: 2rem;
+    }
+    .how-section h3 { color: #f1f5f9; margin-bottom: 1rem; font-size: 1rem; }
+    .how-section ul { list-style: none; padding: 0; }
+    .how-section li {
+      padding: 0.4rem 0; padding-left: 1.2rem; position: relative;
+      color: #cbd5e1; font-size: 0.88rem; line-height: 1.5;
+    }
+    .how-section li::before { content: '→'; position: absolute; left: 0; color: #3b82f6; }
+    .steps { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .step {
+      background: #334155; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.78rem;
+      color: #94a3b8; border: 1px solid #475569; transition: all 0.3s;
+    }
+    .step.active { background: #1d4ed8; color: #fff; border-color: #3b82f6; }
+    .step.done { background: #065f46; color: #6ee7b7; border-color: #10b981; }
+    .home-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 2rem; }
+    .home-card {
+      background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 1.5rem;
+      cursor: pointer; transition: all 0.2s; text-align: center;
+    }
+    .home-card:hover { border-color: #3b82f6; transform: translateY(-2px); }
+    .home-card .hicon { font-size: 2rem; margin-bottom: 0.8rem; }
+    .home-card h3 { font-size: 1rem; color: #f1f5f9; margin-bottom: 0.4rem; }
+    .home-card p { font-size: 0.78rem; color: #94a3b8; }
+    @media (max-width: 768px) {
+      .sim-container { grid-template-columns: 1fr; }
+      .sim-middle { flex-direction: row; min-height: auto; padding: 1rem 0; }
+      .arrow-track { width: 200px; height: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="logo">⚡ Protocol Sim</div>
+    <div class="menu">
+      <button class="active" data-page="home">Início</button>
+      <button data-page="rest">REST</button>
+      <button data-page="graphql">GraphQL</button>
+      <button data-page="grpc">gRPC</button>
+      <button data-page="websocket">WebSocket</button>
+      <button data-page="queue">Queue</button>
+    </div>
+  </nav>
+
+  <main>
+    <!-- HOME -->
+    <div class="page active" id="page-home">
+      <h1 style="font-size:1.5rem; margin-bottom:0.5rem;">Como os protocolos funcionam?</h1>
+      <p class="proto-description">Escolha um protocolo abaixo para ver uma simulação visual de como a comunicação acontece entre client e server.</p>
+      <div class="home-grid">
+        <div class="home-card" data-goto="rest"><div class="hicon">🌐</div><h3>REST</h3><p>Request/Response via HTTP com verbos e URLs</p></div>
+        <div class="home-card" data-goto="graphql"><div class="hicon">◈</div><h3>GraphQL</h3><p>Query flexível — pede exatamente o que precisa</p></div>
+        <div class="home-card" data-goto="grpc"><div class="hicon">⚙️</div><h3>gRPC</h3><p>Chamada remota binária de alta performance</p></div>
+        <div class="home-card" data-goto="websocket"><div class="hicon">🔌</div><h3>WebSocket</h3><p>Conexão persistente bidirecional em tempo real</p></div>
+        <div class="home-card" data-goto="queue"><div class="hicon">📨</div><h3>Message Queue</h3><p>Comunicação assíncrona via fila de mensagens</p></div>
+      </div>
+    </div>
+
+    <!-- REST -->
+    <div class="page" id="page-rest">
+      <div class="proto-header"><span class="icon">🌐</span><h1>REST API</h1></div>
+      <p class="proto-description">
+        REST usa <strong>HTTP</strong> como transporte. Cada recurso tem uma URL e o client usa verbos (GET, POST, PUT, DELETE) para operar sobre eles.
+        A comunicação é <strong>stateless</strong> — cada request é independente.
+      </p>
+      <div class="steps" id="steps-rest">
+        <div class="step">1. Client monta request</div>
+        <div class="step">2. GET /users via HTTP</div>
+        <div class="step">3. Server processa</div>
+        <div class="step">4. Response JSON 200 OK</div>
+        <div class="step">5. Client recebe dados</div>
+      </div>
+      <button class="btn-run" onclick="simulate('rest')">▶ Simular Request</button>
+      <div class="sim-container">
+        <div class="sim-box"><h3>Client</h3><div class="log-area" id="log-rest-client"></div></div>
+        <div class="sim-middle">
+          <div class="arrow-label">▼ Request</div>
+          <div class="arrow-track" id="track-rest"><div class="arrow-dot" id="dot-rest" style="background:#38bdf8;"></div></div>
+          <div class="arrow-label">▲ Response</div>
+        </div>
+        <div class="sim-box"><h3>Server (porta 3001)</h3><div class="log-area" id="log-rest-server"></div></div>
+      </div>
+      <div class="how-section">
+        <h3>Como funciona o REST</h3>
+        <ul>
+          <li>Cada recurso é identificado por uma URL (ex: /users, /users/1)</li>
+          <li>Verbos HTTP definem a ação: GET (ler), POST (criar), PUT (atualizar), DELETE (remover)</li>
+          <li>Stateless: o server não guarda estado entre requests</li>
+          <li>Resposta tipicamente em JSON com status code HTTP (200, 404, 500...)</li>
+          <li>Simples de cachear via headers HTTP padrão</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- GRAPHQL -->
+    <div class="page" id="page-graphql">
+      <div class="proto-header"><span class="icon">◈</span><h1>GraphQL</h1></div>
+      <p class="proto-description">
+        GraphQL usa um <strong>único endpoint</strong> e o client envia uma <strong>query declarativa</strong> pedindo exatamente os campos que precisa.
+        Evita over-fetching e under-fetching de dados.
+      </p>
+      <div class="steps" id="steps-graphql">
+        <div class="step">1. Client escreve query</div>
+        <div class="step">2. POST /graphql</div>
+        <div class="step">3. Server valida schema</div>
+        <div class="step">4. Resolver executa</div>
+        <div class="step">5. Retorna só o pedido</div>
+      </div>
+      <button class="btn-run" onclick="simulate('graphql')">▶ Simular Query</button>
+      <div class="sim-container">
+        <div class="sim-box"><h3>Client</h3><div class="log-area" id="log-graphql-client"></div></div>
+        <div class="sim-middle">
+          <div class="arrow-label">▼ Query</div>
+          <div class="arrow-track" id="track-graphql"><div class="arrow-dot" id="dot-graphql" style="background:#a78bfa;"></div></div>
+          <div class="arrow-label">▲ Data</div>
+        </div>
+        <div class="sim-box"><h3>Server (porta 3002)</h3><div class="log-area" id="log-graphql-server"></div></div>
+      </div>
+      <div class="how-section">
+        <h3>Como funciona o GraphQL</h3>
+        <ul>
+          <li>Único endpoint (geralmente POST /graphql)</li>
+          <li>Client define a estrutura da resposta via query language</li>
+          <li>Schema tipado no server define o que é possível consultar</li>
+          <li>Resolvers mapeiam campos da query para lógica de dados</li>
+          <li>Suporta queries, mutations (escrita) e subscriptions (realtime)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- GRPC -->
+    <div class="page" id="page-grpc">
+      <div class="proto-header"><span class="icon">⚙️</span><h1>gRPC</h1></div>
+      <p class="proto-description">
+        gRPC usa <strong>Protocol Buffers</strong> (binário) sobre HTTP/2. O contrato é definido em um arquivo <strong>.proto</strong> e o client chama funções remotas como se fossem locais.
+      </p>
+      <div class="steps" id="steps-grpc">
+        <div class="step">1. Contrato .proto definido</div>
+        <div class="step">2. Client chama RPC</div>
+        <div class="step">3. Serializa em binário</div>
+        <div class="step">4. HTTP/2 multiplexado</div>
+        <div class="step">5. Server deserializa</div>
+        <div class="step">6. Resposta binária</div>
+      </div>
+      <button class="btn-run" onclick="simulate('grpc')">▶ Simular RPC Call</button>
+      <div class="sim-container">
+        <div class="sim-box"><h3>Client (stub)</h3><div class="log-area" id="log-grpc-client"></div></div>
+        <div class="sim-middle">
+          <div class="arrow-label">▼ Protobuf</div>
+          <div class="arrow-track" id="track-grpc"><div class="arrow-dot" id="dot-grpc" style="background:#34d399;"></div></div>
+          <div class="arrow-label">▲ Protobuf</div>
+        </div>
+        <div class="sim-box"><h3>Server (porta 3003)</h3><div class="log-area" id="log-grpc-server"></div></div>
+      </div>
+      <div class="how-section">
+        <h3>Como funciona o gRPC</h3>
+        <ul>
+          <li>Arquivo .proto define serviços e mensagens (tipagem forte)</li>
+          <li>Código gerado automaticamente para client e server (stubs)</li>
+          <li>Serialização binária (Protocol Buffers) — menor e mais rápido que JSON</li>
+          <li>Usa HTTP/2: multiplexing, streaming bidirecional, compressão de headers</li>
+          <li>Ideal para comunicação entre microserviços com baixa latência</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- WEBSOCKET -->
+    <div class="page" id="page-websocket">
+      <div class="proto-header"><span class="icon">🔌</span><h1>WebSocket</h1></div>
+      <p class="proto-description">
+        WebSocket abre uma <strong>conexão persistente</strong> e bidirecional. Após o handshake HTTP inicial, client e server podem enviar mensagens a qualquer momento sem overhead de novos requests.
+      </p>
+      <div class="steps" id="steps-websocket">
+        <div class="step">1. HTTP Upgrade request</div>
+        <div class="step">2. Handshake aceito (101)</div>
+        <div class="step">3. Conexão aberta</div>
+        <div class="step">4. Client envia msg</div>
+        <div class="step">5. Server responde</div>
+        <div class="step">6. Bidirecional contínuo</div>
+      </div>
+      <button class="btn-run" onclick="simulate('websocket')">▶ Simular Conexão</button>
+      <div class="sim-container">
+        <div class="sim-box"><h3>Client</h3><div class="log-area" id="log-websocket-client"></div></div>
+        <div class="sim-middle">
+          <div class="arrow-label">⇅ Full-duplex</div>
+          <div class="arrow-track" id="track-websocket"><div class="arrow-dot" id="dot-websocket" style="background:#fbbf24;"></div></div>
+          <div class="arrow-label">Conexão persistente</div>
+        </div>
+        <div class="sim-box"><h3>Server (porta 3004)</h3><div class="log-area" id="log-websocket-server"></div></div>
+      </div>
+      <div class="how-section">
+        <h3>Como funciona o WebSocket</h3>
+        <ul>
+          <li>Inicia com HTTP Upgrade handshake (status 101 Switching Protocols)</li>
+          <li>Após handshake, conexão TCP fica aberta — sem overhead de reconexão</li>
+          <li>Bidirecional: ambos os lados enviam a qualquer momento</li>
+          <li>Frames leves (2-14 bytes de header vs ~800 bytes HTTP)</li>
+          <li>Ideal para: chat, games, dashboards realtime, notificações push</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- QUEUE -->
+    <div class="page" id="page-queue">
+      <div class="proto-header"><span class="icon">📨</span><h1>Message Queue</h1></div>
+      <p class="proto-description">
+        Na comunicação via fila, o <strong>Producer</strong> publica mensagens e o <strong>Consumer</strong> processa de forma assíncrona.
+        Não há conexão direta — o broker intermediário garante entrega e desacoplamento.
+      </p>
+      <div class="steps" id="steps-queue">
+        <div class="step">1. Producer cria mensagem</div>
+        <div class="step">2. Publica na fila</div>
+        <div class="step">3. Broker armazena</div>
+        <div class="step">4. Consumer consome</div>
+        <div class="step">5. Processa mensagem</div>
+        <div class="step">6. Acknowledge (ACK)</div>
+      </div>
+      <button class="btn-run" onclick="simulate('queue')">▶ Simular Mensagem</button>
+      <div class="sim-container">
+        <div class="sim-box"><h3>Producer</h3><div class="log-area" id="log-queue-client"></div></div>
+        <div class="sim-middle">
+          <div class="arrow-label">▼ Publish</div>
+          <div class="arrow-track" id="track-queue"><div class="arrow-dot" id="dot-queue" style="background:#f87171;"></div></div>
+          <div class="arrow-label">▲ Consume</div>
+        </div>
+        <div class="sim-box"><h3>Consumer / Broker (porta 3005)</h3><div class="log-area" id="log-queue-server"></div></div>
+      </div>
+      <div class="how-section">
+        <h3>Como funciona a Message Queue</h3>
+        <ul>
+          <li>Producer e Consumer são desacoplados — não se conhecem diretamente</li>
+          <li>Broker (ex: RabbitMQ, Kafka, SQS) armazena mensagens até serem consumidas</li>
+          <li>Garante entrega mesmo que o consumer esteja offline (durabilidade)</li>
+          <li>Permite processamento assíncrono e em paralelo (scaling horizontal)</li>
+          <li>Consumer envia ACK após processar — fila remove a mensagem</li>
+          <li>Patterns: pub/sub, work queues, request/reply, dead letter</li>
+        </ul>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const menuBtns = document.querySelectorAll('nav .menu button');
+    const pages = document.querySelectorAll('.page');
+    const homeCards = document.querySelectorAll('.home-card[data-goto]');
+
+    function goTo(pageId) {
+      pages.forEach(p => p.classList.remove('active'));
+      menuBtns.forEach(b => b.classList.remove('active'));
+      document.getElementById(`page-${pageId}`).classList.add('active');
+      document.querySelector(`button[data-page="${pageId}"]`).classList.add('active');
+    }
+
+    menuBtns.forEach(btn => btn.addEventListener('click', () => goTo(btn.dataset.page)));
+    homeCards.forEach(card => card.addEventListener('click', () => goTo(card.dataset.goto)));
+
+    const simulations = {
+      rest: [
+        { side: 'client', cls: 'log-req', text: '→ GET /users HTTP/1.1' },
+        { side: 'client', cls: 'log-info', text: '  Host: localhost:3001' },
+        { side: 'client', cls: 'log-info', text: '  Accept: application/json' },
+        { side: 'server', cls: 'log-info', text: '← Recebido GET /users' },
+        { side: 'server', cls: 'log-info', text: '  Consultando banco de dados...' },
+        { side: 'server', cls: 'log-res', text: '→ 200 OK | Content-Type: application/json' },
+        { side: 'server', cls: 'log-res', text: '  Body: [{ id:1, name:"User 1", ... }, ...50 items]' },
+        { side: 'client', cls: 'log-res', text: '← 200 OK recebido (1.2kb)' },
+        { side: 'client', cls: 'log-res', text: '  JSON parsed: Array(50) usuários ✓' },
+      ],
+      graphql: [
+        { side: 'client', cls: 'log-req', text: '→ POST /graphql' },
+        { side: 'client', cls: 'log-info', text: '  query { users { id name email age } }' },
+        { side: 'server', cls: 'log-info', text: '← Query recebida' },
+        { side: 'server', cls: 'log-info', text: '  Validando contra schema...' },
+        { side: 'server', cls: 'log-info', text: '  Schema válido ✓' },
+        { side: 'server', cls: 'log-info', text: '  Executando resolver "users"...' },
+        { side: 'server', cls: 'log-res', text: '→ { data: { users: [...] } }' },
+        { side: 'server', cls: 'log-res', text: '  Retorna APENAS os 4 campos pedidos' },
+        { side: 'client', cls: 'log-res', text: '← Dados recebidos — sem over-fetching ✓' },
+      ],
+      grpc: [
+        { side: 'client', cls: 'log-info', text: '  Proto carregado: UserService.GetUsers' },
+        { side: 'client', cls: 'log-req', text: '→ RPC call: GetUsers({})' },
+        { side: 'client', cls: 'log-info', text: '  Serializado: Empty → 0 bytes (protobuf)' },
+        { side: 'client', cls: 'log-info', text: '  Enviando via HTTP/2 stream...' },
+        { side: 'server', cls: 'log-info', text: '← Frame HTTP/2 recebido' },
+        { side: 'server', cls: 'log-info', text: '  Deserializando protobuf...' },
+        { side: 'server', cls: 'log-info', text: '  Executando GetUsers handler' },
+        { side: 'server', cls: 'log-res', text: '→ UserList { users: [50] } (binário ~2.1kb)' },
+        { side: 'client', cls: 'log-res', text: '← Response deserializada: 50 User objects' },
+        { side: 'client', cls: 'log-res', text: '  ~40% menor que JSON equivalente ✓' },
+      ],
+      websocket: [
+        { side: 'client', cls: 'log-req', text: '→ HTTP Upgrade: websocket' },
+        { side: 'server', cls: 'log-res', text: '← 101 Switching Protocols' },
+        { side: 'client', cls: 'log-res', text: '  Conexão WebSocket aberta ✓' },
+        { side: 'client', cls: 'log-req', text: '→ Frame: { type: "GET_USERS" }' },
+        { side: 'server', cls: 'log-info', text: '← Mensagem recebida (14 bytes de header)' },
+        { side: 'server', cls: 'log-res', text: '→ Frame: { users: [...50] }' },
+        { side: 'client', cls: 'log-res', text: '← Dados recebidos (mesma conexão — sem handshake)' },
+        { side: 'client', cls: 'log-req', text: '→ Pode enviar mais msgs a qualquer momento...' },
+        { side: 'server', cls: 'log-req', text: '→ Server também pode fazer push sem pedido ✓' },
+      ],
+      queue: [
+        { side: 'client', cls: 'log-req', text: '→ Publish: { type:"GET_USERS", id:"abc" }' },
+        { side: 'client', cls: 'log-info', text: '  Mensagem enviada para fila "requests"' },
+        { side: 'server', cls: 'log-info', text: '  [Broker] Mensagem enfileirada' },
+        { side: 'server', cls: 'log-info', text: '  [Consumer] Polling... mensagem encontrada' },
+        { side: 'server', cls: 'log-info', text: '  [Consumer] Processando GET_USERS...' },
+        { side: 'server', cls: 'log-res', text: '→ Publish response na fila "responses"' },
+        { side: 'server', cls: 'log-info', text: '  [Consumer] ACK enviado — msg removida ✓' },
+        { side: 'client', cls: 'log-res', text: '← Consume: resposta com correlationId "abc"' },
+        { side: 'client', cls: 'log-res', text: '  Dados recebidos de forma assíncrona ✓' },
+      ],
+    };
+
+    async function simulate(protocol) {
+      const clientLog = document.getElementById(`log-${protocol}-client`);
+      const serverLog = document.getElementById(`log-${protocol}-server`);
+      const steps = document.querySelectorAll(`#steps-${protocol} .step`);
+      const dot = document.getElementById(`dot-${protocol}`);
+      const track = document.getElementById(`track-${protocol}`);
+      const btn = document.querySelector(`#page-${protocol} .btn-run`);
+
+      btn.disabled = true;
+      clientLog.innerHTML = '';
+      serverLog.innerHTML = '';
+      steps.forEach(s => s.classList.remove('active', 'done'));
+
+      const msgs = simulations[protocol];
+      const stepInterval = Math.max(1, Math.floor(msgs.length / steps.length));
+
+      for (let i = 0; i < msgs.length; i++) {
+        const msg = msgs[i];
+        const stepIdx = Math.min(Math.floor(i / stepInterval), steps.length - 1);
+
+        steps.forEach((s, si) => {
+          if (si < stepIdx) { s.classList.add('done'); s.classList.remove('active'); }
+          else if (si === stepIdx) { s.classList.add('active'); s.classList.remove('done'); }
+          else { s.classList.remove('active', 'done'); }
+        });
+
+        const isDown = msg.side === 'server';
+        const trackH = track.offsetHeight || 200;
+        dot.style.opacity = '1';
+        dot.style.transition = 'top 0.3s ease';
+        dot.style.top = isDown ? `${trackH - 14}px` : '0px';
+
+        const target = msg.side === 'client' ? clientLog : serverLog;
+        const line = document.createElement('div');
+        line.className = msg.cls;
+        line.textContent = msg.text;
+        target.appendChild(line);
+        target.scrollTop = target.scrollHeight;
+
+        await sleep(550);
+      }
+
+      steps.forEach(s => { s.classList.remove('active'); s.classList.add('done'); });
+      dot.style.opacity = '0';
+      btn.disabled = false;
+    }
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+  </script>
+</body>
+</html>
